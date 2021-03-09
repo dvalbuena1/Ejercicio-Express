@@ -1,0 +1,26 @@
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link rel="stylesheet" href="/stylesheets/style.css" />
+  </head>
+
+  <body>
+    <h1>Chat</h1>
+    <div id="messages"></div>
+    <form id="form">
+      <label for="author">Author</label>
+      <input
+        type="text"
+        pattern="^[áéíóúñÁÉÍÓÚÑa-zA-Z]{3,}\s[áéíóúñÁÉÍÓÚÑa-zA-Z]{3,}(\s[áéíóúñÁÉÍÓÚÑa-zA-Z]{3,})*$"
+        required
+        id="author"
+      />
+      <label for="message">Message</label>
+      <input type="text" minlength="5" required id="message" />
+      <input type="submit" value="submit" />
+    </form>
+    <script src="./javascripts/script.js"></script>
+  </body>
+</html>
