@@ -40,28 +40,26 @@ router.get("/:ts", (req, res, next) => {
 router.post("/", (req, res, next) => {
   let body = req.body;
   const { error } = schema.validate(body);
-  console.log(error);
   if (!error && body.ts && Object.keys(body).length == 3) {
     ws.addMessages(body);
     ws.saveMessages();
     ws.sendMessages();
     res.sendStatus(200);
   } else {
-    res.sendStatus(400);
+    res.status(400).send(error);
   }
 });
 
 router.put("/:ts", (req, res, next) => {
   let body = req.body;
   const { error } = schema.validate(body);
-  console.log(error);
   if (!error && Object.keys(body).length == 2) {
     ws.updateMessage(req.params.ts, body);
     ws.saveMessages();
     ws.sendMessages();
     res.sendStatus(200);
   } else {
-    res.sendStatus(400);
+    res.status(400).send(error);
   }
 });
 
