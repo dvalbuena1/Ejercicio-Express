@@ -1,5 +1,6 @@
 const WebSocket = require("ws");
 const fs = require("fs");
+const mc = require("./controller/message");
 
 const clients = [];
 let messages = [];
@@ -9,62 +10,37 @@ const wsConnection = (server) => {
 
   wss.on("connection", (ws) => {
     clients.push(ws);
-    loadMessages();
-    sendMessages();
+    mc.getAll((data) => {
+      replaceMessage(data);
+      sendMessages();
+    });
 
     ws.on("message", (message) => {
-      messages.push(JSON.parse(message));
-      sendMessages();
-      saveMessages();
+      mc.post(JSON.parse(message), (response) => {
+        mc.getAll((data) => {
+          messages = data;
+          sendMessages();
+        });
+      });
     });
   });
 };
 
-const saveMessages = () => {
-  fs.writeFile("messageData.json", JSON.stringify(messages, null, 4), (err) => {
-    if (err) {
-      console.log(err);
-    }
-  });
-};
-
 const loadMessages = () => {
-  let data = fs.readFileSync("messageData.json");
-  messages = JSON.parse(data);
+  mc.getAll((data) => {
+    messages = data;
+  });
 };
 
 const sendMessages = () => {
   clients.forEach((client) => client.send(JSON.stringify(messages)));
 };
 
-const addMessages = (message) => {
-  messages.push(message);
-};
-
-const updateMessage = (ts, data) => {
-  let index = 0;
-  while (index < messages.length) {
-    const element = messages[index];
-    if (element.ts == ts) {
-      element.message = data.message;
-      element.author = data.author;
-      break;
-    }
-    index++;
-  }
-};
-
 const replaceMessage = (arr) => {
   messages = arr;
 };
 
-const getMessages = () => messages;
-
 exports.wsConnection = wsConnection;
 exports.sendMessages = sendMessages;
-exports.getMessages = getMessages;
 exports.loadMessages = loadMessages;
-exports.addMessages = addMessages;
-exports.saveMessages = saveMessages;
-exports.updateMessage = updateMessage;
 exports.replaceMessage = replaceMessage;

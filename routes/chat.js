@@ -1,6 +1,8 @@
 const ws = require("../wslib");
 const express = require("express");
 const Joi = require("joi");
+const mc = require("../controller/message");
+const { response } = require("express");
 const router = express.Router();
 
 const schema = Joi.object({
@@ -14,70 +16,76 @@ const schema = Joi.object({
 });
 
 router.get("/", (req, res, next) => {
-  res.send(ws.getMessages());
+  mc.getAll((data) => {
+    res.send(data);
+  });
 });
 
 router.get("/:ts", (req, res, next) => {
-  let json = ws.getMessages();
-
-  let index = 0;
-  let found = false;
-  while (index < json.length && !found) {
-    const element = json[index];
-    if (element.ts == req.params.ts) {
-      found = true;
-      break;
+  mc.getById(req.params.ts, (response) => {
+    if (response === null) {
+      res.sendStatus(404);
+    } else {
+      res.send(response);
     }
-    index++;
-  }
-  if (found) {
-    res.send(json[index]);
-  } else {
-    res.sendStatus(404);
-  }
+  });
 });
 
 router.post("/", (req, res, next) => {
   let body = req.body;
   const { error } = schema.validate(body);
-  console.log(error);
+
   if (!error && body.ts && Object.keys(body).length == 3) {
-    ws.addMessages(body);
-    ws.saveMessages();
-    ws.sendMessages();
-    res.sendStatus(200);
+    mc.getById(body.ts, (found) => {
+      if (found === null) {
+        mc.post(body, (response) => {
+          res.send(response);
+          mc.getAll((data) => {
+            ws.replaceMessage(data);
+            ws.sendMessages();
+          });
+        });
+      } else {
+        res.status(400).send("ts already in use");
+      }
+    });
   } else {
-    res.sendStatus(400);
+    res.status(400).send(error);
   }
 });
 
 router.put("/:ts", (req, res, next) => {
   let body = req.body;
   const { error } = schema.validate(body);
-  console.log(error);
   if (!error && Object.keys(body).length == 2) {
-    ws.updateMessage(req.params.ts, body);
-    ws.saveMessages();
-    ws.sendMessages();
-    res.sendStatus(200);
+    mc.put(req.params.ts, body, (response) => {
+      if (response[0] !== 0) {
+        res.send(200);
+        mc.getAll((data) => {
+          ws.replaceMessage(data);
+          ws.sendMessages();
+        });
+      } else {
+        res.sendStatus(404);
+      }
+    });
   } else {
-    res.sendStatus(400);
+    res.status(400).send(error);
   }
 });
 
 router.delete("/:ts", (req, res, next) => {
-  let length = ws.getMessages().length;
-  ws.replaceMessage(
-    ws.getMessages().filter((value, index, arr) => value.ts != req.params.ts)
-  );
-
-  if (length !== ws.getMessages().length) {
-    ws.saveMessages();
-    ws.sendMessages();
-    res.sendStatus(200);
-  } else {
-    res.sendStatus(404);
-  }
+  mc.remove(req.params.ts, (response) => {
+    if (response === 1) {
+      res.sendStatus(204);
+      mc.getAll((data) => {
+        ws.replaceMessage(data);
+        ws.sendMessages();
+      });
+    } else {
+      res.sendStatus(404);
+    }
+  });
 });
 
 module.exports = router;
